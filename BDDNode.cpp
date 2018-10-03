@@ -1,6 +1,7 @@
 #include "BDDNode.h"
 
 
+
 BDDNode::BDDNode() {
 	id = leftId = rightId = 0;
 	name = "NULL";

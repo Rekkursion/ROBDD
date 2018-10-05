@@ -18,7 +18,8 @@
 // define
 #define uint unsigned int
 #define pause system("PAUSE")
-#define DEBUG
+//#define DEBUG
+#define DEBUG_MAIN
 
 // function prototype
 bool getInput(int, char**);
@@ -45,7 +46,7 @@ bool isSameVector(const std::vector<uint>& vec1, const std::vector<uint>& vec2) 
 	if (vec1.size() != vec2.size())
 		return false;
 
-	for (int k = 0; k < vec1.size(); k++) {
+	for (int k = 0; (uint)k < vec1.size(); k++) {
 		if (vec1[k] != vec2[k])
 			return false;
 	}
@@ -149,13 +150,13 @@ bool getInput(int argc, char** argv) {
 						break;
 
 					case '1':
-						for (int j = 0; j < posTmpVec.size(); j++)
+						for (int j = 0; (uint)j < posTmpVec.size(); j++)
 							posTmpVec[j] += cif;
 						break;
 				}
 			}
 
-			for (int k = 0; k < posTmpVec.size(); k++)
+			for (int k = 0; (uint)k < posTmpVec.size(); k++)
 				possibleNumbers.insert(posTmpVec[k]);
 		}
 	} // end of while loop for fin
@@ -183,7 +184,7 @@ bool initBDD() {
 	int depth = 1;
 	int depthChangeUpBound = 1;
 
-	for (int idx = 1; idx < BDD.size(); idx++) {
+	for (int idx = 1; (uint)idx < BDD.size(); idx++) {
 
 		// rekkursion
 		BDD[idx] = BDDNode(idx, ((idx << 1) < (1 << inputNum)) ? (idx << 1) : (BDD.size() - 1), (((idx << 1) + 1) < (1 << inputNum)) ? ((idx << 1) + 1) : (BDD.size() - 2), (depth <= inputNum) ? inputNames[depth - 1] : "NULL");
@@ -208,17 +209,18 @@ bool initBDD() {
 
 bool solve(int curNodeId, int curNumber, int curNumberBit) {
 
+	// arrive terminal nodes
 	if (BDD[curNodeId].isTerminal) {
 		int father = curNodeId >> 1;
 
 		if (possibleNumbers.count(curNumber)) {
-			if(curNodeId & 1 == 0)
+			if((curNodeId & 1) == 0)
 				BDD[father].setLeftId(BDDNode::getTerminalId(1));
 			else
 				BDD[father].setRightId(BDDNode::getTerminalId(1));
 		}
 		else {
-			if (curNodeId & 1 == 0)
+			if ((curNodeId & 1) == 0)
 				BDD[father].setLeftId(BDDNode::getTerminalId(0));
 			else
 				BDD[father].setRightId(BDDNode::getTerminalId(0));
@@ -226,8 +228,11 @@ bool solve(int curNodeId, int curNumber, int curNumberBit) {
 
 		return true;
 	}
+
 	else {
+		// go to the left child
 		solve(curNodeId << 1, curNumber << 1, curNumberBit + 1);
+		// go to the right child
 		solve((curNodeId << 1) + 1, (curNumber << 1) | 1, curNumberBit + 1);
 	}
 
@@ -240,6 +245,7 @@ bool solve(int curNodeId, int curNumber, int curNumberBit) {
 	bool isOkay = true;
 	std::vector<uint> remainedNumbers;
 
+	// find the currently-possible numbers
 	for (std::set<uint>::iterator it_s = possibleNumbers.begin(); it_s != possibleNumbers.end(); it_s++) {
 
 		isOkay = true;
@@ -266,6 +272,7 @@ bool solve(int curNodeId, int curNumber, int curNumberBit) {
 	//system("PAUSE");
 	#endif
 
+	// none of any possible numbers at the current node
 	if (remainedNumbers.empty()) {
 		if ((curNodeId & 1) == 0)
 			BDD[curNodeId >> 1].setLeftId(BDDNode::getTerminalId(0));
@@ -282,7 +289,6 @@ bool reduce() {
 	int size = 1 << inputNum;
 	int noNeedId;
 	bool stillHasTheSameNode = false;
-
 
 	#ifdef DEBUG
 	for (int k = 0; k < size; k++) {
@@ -372,12 +378,37 @@ bool reduce() {
 }
 
 bool outputDotFile() {
+	// output the dot file for Graphviz
+
 	std::string dot = "";
 	int size = (1 << inputNum);
+	std::string curNodeName, lastNodeName;
+	int startIdx;
 
 	std::ofstream fout(dotFileName, std::ios::out);
 
 	fout << "digraph ROBDD {\n";
+
+	for (int k = 0; k < size; k++) {
+		if (BDD[k].getName() != "NULL") {
+			lastNodeName = curNodeName = BDD[k].getName();
+			startIdx = k;
+			break;
+		}
+	}
+	fout << "\t{rank=same";
+	for (int k = startIdx; k < size; k++) {
+
+		if (BDD[k].getName() != "NULL") {
+			if (BDD[k].getName() != lastNodeName) {
+				fout << "}\n\t{rank=same";
+				lastNodeName = BDD[k].getName();
+			}
+
+			fout << " " << BDD[k].getId();
+		}
+	}
+	fout << "}\n\n";
 
 	for (int k = 0; k < size; k++) {
 		if (BDD[k].getName() == "NULL")
@@ -393,7 +424,7 @@ bool outputDotFile() {
 		if (BDD[k].getName() == "NULL")
 			continue;
 
-		fout << "\t" << BDD[k].getId() << " -> " << BDD[k].getLeftId() << " [label=\"0\", style=solid]\n";
+		fout << "\t" << BDD[k].getId() << " -> " << BDD[k].getLeftId() << " [label=\"0\", style=dotted]\n";
 		fout << "\t" << BDD[k].getId() << " -> " << BDD[k].getRightId() << " [label=\"1\", style=solid]\n";
 	}
 	fout << "}\n";

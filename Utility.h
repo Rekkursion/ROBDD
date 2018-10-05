@@ -19,7 +19,6 @@
 #define uint unsigned int
 #define pause system("PAUSE")
 //#define DEBUG
-#define DEBUG_MAIN
 
 // function prototype
 bool getInput(int, char**);
@@ -74,104 +73,105 @@ bool getInput(int argc, char** argv) {
 		return false;
 	}
 
-	/*
+	try {
+		std::string word;
+		int posCount = 0;
 
-	.i 3
-	.o 1
-	.ilb a b c
-	.ob f
-	.p 2
-	-11 1
-	1-1 1
-	.e
-	*/
+		while (fin >> word) {
 
-	std::string word;
-	while (fin >> word) {
+			// .i
+			if (word == CMD_I) {
+				fin >> inputNum;
+				possibleNumbers.clear();
+			}
 
-		// .i
-		if (word == CMD_I) {
-			fin >> inputNum;
-			possibleNumbers.clear();
-		}
+			// .o
+			else if (word == CMD_O) {
+				fin >> outputNum;
+			}
 
-		// .o
-		else if (word == CMD_O) {
-			fin >> outputNum;
-		}
+			// .ilb
+			else if (word == CMD_ILB) {
+				inputNames.clear();
+				inputNames.resize(inputNum);
 
-		// .ilb
-		else if (word == CMD_ILB) {
-			inputNames.clear();
-			inputNames.resize(inputNum);
+				for (int k = 0; k < inputNum; k++)
+					fin >> inputNames[k];
+			}
 
-			for (int k = 0; k < inputNum; k++)
-				fin >> inputNames[k];
-		}
+			// .ob
+			else if (word == CMD_OB) {
+				possibleNumbers.clear();
+				possibleNumbers.resize(outputNum);
 
-		// .ob
-		else if (word == CMD_OB) {
-			possibleNumbers.clear();
-			possibleNumbers.resize(outputNum);
+				outputNames.clear();
+				outputNames.resize(outputNum);
 
-			outputNames.clear();
-			outputNames.resize(outputNum);
+				for (int k = 0; k < outputNum; k++)
+					fin >> outputNames[k];
+			}
 
-			for (int k = 0; k < outputNum; k++)
-				fin >> outputNames[k];
-		}
+			// .p
+			else if (word == CMD_P) {
+				fin >> posNum;
+			}
 
-		// .p
-		else if (word == CMD_P) {
-			fin >> posNum;
-		}
+			// .e
+			else if (word == CMD_E) {
+				// end of input
+				if (posCount != posNum) {
+					printf("Wrong input format");
+					return false;
+				}
 
-		// .e
-		else if (word == CMD_E) {
-			// end of input
-			break;
-		}
+				break;
+			}
 
-		// pos
-		else {
-			// rekkursion
+			// pos
+			else {
+				posCount++;
 
-			std::string input = word;
-			std::string output;
-			std::vector<int> posTmpVec;
-			int posTmpVecLen;
+				std::string input = word;
+				std::string output;
+				std::vector<int> posTmpVec;
+				int posTmpVecLen;
 
-			fin >> output;
+				fin >> output;
 
-			for (int outpIdx = 0; outpIdx < output.length(); outpIdx++) {
+				for (int outpIdx = 0; (uint)outpIdx < output.length(); outpIdx++) {
 
-				posTmpVec.clear();
-				posTmpVec.push_back(0);
+					posTmpVec.clear();
+					posTmpVec.push_back(0);
 
-				for (int k = inputNum - 1, cif = 1; k >= 0; k--, cif <<= 1) {
-					switch (input[k]) {
+					for (int k = inputNum - 1, cif = 1; k >= 0; k--, cif <<= 1) {
+						switch (input[k]) {
 
-						case '-':
-							posTmpVecLen = posTmpVec.size();
-							for (int j = 0; j < posTmpVecLen; j++)
-								posTmpVec.push_back(posTmpVec[j] + cif);
-							break;
+							case '-':
+								posTmpVecLen = posTmpVec.size();
+								for (int j = 0; j < posTmpVecLen; j++)
+									posTmpVec.push_back(posTmpVec[j] + cif);
+								break;
 
-						case '1':
-							for (int j = 0; (uint)j < posTmpVec.size(); j++)
-								posTmpVec[j] += cif;
-							break;
+							case '1':
+								for (int j = 0; (uint)j < posTmpVec.size(); j++)
+									posTmpVec[j] += cif;
+								break;
+						}
+					}
+
+					if (output[outpIdx] == '1') {
+						for (int k = 0; (uint)k < posTmpVec.size(); k++)
+							possibleNumbers[outpIdx].insert(posTmpVec[k]);
 					}
 				}
-
-				if (output[outpIdx] == '1') {
-					for (int k = 0; (uint)k < posTmpVec.size(); k++)
-						possibleNumbers[outpIdx].insert(posTmpVec[k]);
-				}
 			}
-		}
-	} // end of while loop for fin
-	fin.close();
+		} // end of while loop for fin
+		fin.close();
+	}
+	catch (...) {
+		printf("Wrong input format");
+		return false;
+	}
 
 	#ifdef DEBUG
 	for (std::set<uint>::iterator it = possibleNumbers.begin(); it != possibleNumbers.end(); it++)
@@ -195,6 +195,9 @@ bool initBDD() {
 	int depth = 1;
 	int depthChangeUpBound = 1;
 
+	BDDNode::setTerminalId_0(BDD.size() - 1);
+	BDDNode::setTerminalId_1(BDD.size() - 2);
+
 	for (int idx = 1; (uint)idx < BDD.size(); idx++) {
 
 		BDD[idx] = BDDNode(idx, ((idx << 1) < (1 << inputNum)) ? (idx << 1) : (BDD.size() - 1), (((idx << 1) + 1) < (1 << inputNum)) ? ((idx << 1) + 1) : (BDD.size() - 2), (depth <= inputNum) ? inputNames[depth - 1] : "NULL");
@@ -205,9 +208,6 @@ bool initBDD() {
 			depthChangeUpBound = (depthChangeUpBound << 1) + 1;
 		}
 	}
-
-	BDDNode::setTerminalId_0(BDD.size() - 1);
-	BDDNode::setTerminalId_1(BDD.size() - 2);
 
 	#ifdef DEBUG
 	for (std::vector<BDDNode>::iterator it = BDD.begin() + 1; it != BDD.end(); it++)
@@ -289,7 +289,8 @@ bool solve(int curNodeId, int curNumber, int curNumberBit, int outputIdx) {
 		else
 			BDD[curNodeId >> 1].setRightId(BDDNode::getTerminalId(0));
 
-		BDD[curNodeId].setName("NULL");
+		if(curNodeId != 1)
+			BDD[curNodeId].setName("NULL");
 	}
 
 	return true;
@@ -392,15 +393,15 @@ bool outputDotFile(int outputIdx) {
 
 	std::string dot = "";
 	int size = (1 << inputNum);
-	std::string curNodeName, lastNodeName;
+	std::string curNodeName = "", lastNodeName = "";
 	std::ofstream fout;
-	int startIdx;
+	int startIdx = 0;
 
 	if(outputIdx == 0)
 		fout.open(dotFileName, std::ios::out);
 	else {
 		fout.open(dotFileName, std::ios::out | std::ios::app);
-		fout << "\n\n";
+		fout << "\n";
 	}
 
 	fout << "digraph " << outputNames[outputIdx] << " {\n";

@@ -382,10 +382,33 @@ bool outputDotFile() {
 
 	std::string dot = "";
 	int size = (1 << inputNum);
+	std::string curNodeName, lastNodeName;
+	int startIdx;
 
 	std::ofstream fout(dotFileName, std::ios::out);
 
 	fout << "digraph ROBDD {\n";
+
+	for (int k = 0; k < size; k++) {
+		if (BDD[k].getName() != "NULL") {
+			lastNodeName = curNodeName = BDD[k].getName();
+			startIdx = k;
+			break;
+		}
+	}
+	fout << "\t{rank=same";
+	for (int k = startIdx; k < size; k++) {
+
+		if (BDD[k].getName() != "NULL") {
+			if (BDD[k].getName() != lastNodeName) {
+				fout << "}\n\t{rank=same";
+				lastNodeName = BDD[k].getName();
+			}
+
+			fout << " " << BDD[k].getId();
+		}
+	}
+	fout << "}\n\n";
 
 	for (int k = 0; k < size; k++) {
 		if (BDD[k].getName() == "NULL")
@@ -401,7 +424,7 @@ bool outputDotFile() {
 		if (BDD[k].getName() == "NULL")
 			continue;
 
-		fout << "\t" << BDD[k].getId() << " -> " << BDD[k].getLeftId() << " [label=\"0\", style=solid]\n";
+		fout << "\t" << BDD[k].getId() << " -> " << BDD[k].getLeftId() << " [label=\"0\", style=dotted]\n";
 		fout << "\t" << BDD[k].getId() << " -> " << BDD[k].getRightId() << " [label=\"1\", style=solid]\n";
 	}
 	fout << "}\n";

@@ -4,18 +4,32 @@
 #include <vector>
 #include <set>
 #include "Utility.h"
+#define DEBUG_MAIN
 
 int main(int argc, char** argv) {
 	if (!getInput(argc, argv))
 		return 0;
 
-	initBDD();
-	solve(1, 0, 0);
-	reduce();
-	outputDotFile();
+	for (int outputIdx = 0; outputIdx < outputNum; outputIdx++) {
+		initBDD();
+		solve(1, 0, 0, outputIdx);
 
-	for (int k = 0; k < (1 << inputNum); k++) {
-		std::cout << BDD[k];
+		#ifdef DEBUG_MAIN
+		for (int k = 0; k < (1 << inputNum); k++) {
+			std::cout << BDD[k];
+		}
+		pause;
+		#endif
+
+		reduce();
+		outputDotFile(outputIdx);
+
+		#ifdef DEBUG_MAIN
+		for (int k = 0; k < (1 << inputNum); k++) {
+			std::cout << BDD[k];
+		}
+		pause;
+		#endif
 	}
 
 	return 0;
